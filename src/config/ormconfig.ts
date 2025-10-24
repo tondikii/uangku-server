@@ -1,5 +1,7 @@
-import { DataSource } from 'typeorm';
-import { User } from '../database/entities/user.entity'; // contoh entity
+// src/config/typeorm.config.ts
+import { ConfigService } from '@nestjs/config';
+import { TypeOrmModuleOptions } from '@nestjs/typeorm';
+import { User } from '../database/entities/user.entity';
 import { Wallet } from '../database/entities/wallet.entity';
 import { TransactionType } from '../database/entities/transaction-type.entity';
 import { TransactionCategory } from '../database/entities/transaction-category.entity';
@@ -8,13 +10,15 @@ import { TransactionWallet } from '../database/entities/transaction-wallet.entit
 import { Loan } from '../database/entities/loan.entity';
 import { LoanWallet } from '../database/entities/loan-wallet.entity';
 
-export const AppDataSource = new DataSource({
+export const getTypeOrmConfig = (
+  configService: ConfigService,
+): TypeOrmModuleOptions => ({
   type: 'postgres',
-  host: 'localhost',
-  port: 5432,
-  username: 'postgres', // sesuaikan
-  password: 'postgres',
-  database: 'uangku',
+  host: configService.get<string>('POSTGRES_HOST'),
+  port: configService.get<number>('POSTGRES_PORT'),
+  username: configService.get<string>('POSTGRES_USERNAME'),
+  password: configService.get<string>('POSTGRES_PASSWORD'),
+  database: configService.get<string>('DATABASE_NAME'),
   entities: [
     User,
     Wallet,
@@ -25,7 +29,7 @@ export const AppDataSource = new DataSource({
     Loan,
     LoanWallet,
   ],
-  migrations: ['src/database/migrations/*.ts'],
+  migrations: [],
   synchronize: false,
   logging: true,
 });
