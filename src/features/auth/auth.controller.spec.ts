@@ -1,10 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { HttpStatus } from '@nestjs/common';
 import { successResponse } from '../../common/utils/response.util';
 
 jest.mock('../../common/utils/response.util', () => ({
-  successResponse: jest.fn((data, message) => ({
+  successResponse: jest.fn((data, message, statusCode) => ({
+    statusCode,
     success: true,
     message,
     data,
@@ -36,7 +38,7 @@ describe('AuthController', () => {
   afterEach(() => jest.clearAllMocks());
 
   describe('signUp', () => {
-    it('should return success response when user registers', async () => {
+    it('should return success response', async () => {
       const dto = { email: 'a@b.com', password: '12345678', name: 'John' };
       const userData = { id: '1', email: dto.email, name: dto.name };
       (service.signUp as jest.Mock).mockResolvedValue({ user: userData });
@@ -47,12 +49,11 @@ describe('AuthController', () => {
       expect(successResponse).toHaveBeenCalledWith(
         { user: userData },
         'User registered successfully',
+        HttpStatus.CREATED,
       );
-      expect(result).toEqual({
-        success: true,
-        message: 'User registered successfully',
-        data: { user: userData },
-      });
+      expect(result.statusCode).toBe(HttpStatus.CREATED);
+      expect(result.success).toBe(true);
+      expect(result.data.user.email).toBe(dto.email);
     });
   });
 
@@ -71,12 +72,11 @@ describe('AuthController', () => {
       expect(successResponse).toHaveBeenCalledWith(
         mockResult,
         'User signed in successfully',
+        HttpStatus.OK,
       );
-      expect(result).toEqual({
-        success: true,
-        message: 'User signed in successfully',
-        data: mockResult,
-      });
+      expect(result.statusCode).toBe(HttpStatus.OK);
+      expect(result.success).toBe(true);
+      expect(result.data.accessToken).toBe('jwt-token');
     });
   });
 });

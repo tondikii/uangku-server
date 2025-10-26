@@ -1,4 +1,3 @@
-// src/common/utils/bcrypt.util.spec.ts
 import { hashPassword, comparePassword } from './bcrypt.util';
 
 describe('bcrypt.util', () => {

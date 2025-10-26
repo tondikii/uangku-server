@@ -11,13 +11,21 @@ export class AuthController {
   @Post('sign-up')
   async signUp(@Body() dto: SignUpDto) {
     const result = await this.authService.signUp(dto);
-    return successResponse(result, 'User registered successfully');
+    return successResponse(
+      result,
+      'User registered successfully',
+      HttpStatus.CREATED,
+    );
   }
 
   @Post('sign-in')
   @HttpCode(HttpStatus.OK)
   async signIn(@Body() dto: SignInDto) {
     const result = await this.authService.signIn(dto);
-    return successResponse(result, 'User signed in successfully');
+    return successResponse(
+      result,
+      'User signed in successfully',
+      HttpStatus.OK,
+    );
   }
 }

@@ -1,4 +1,3 @@
-// src/config/typeorm.config.ts
 import { ConfigService } from '@nestjs/config';
 import { TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { User } from '../database/entities/user.entity';

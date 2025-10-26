@@ -1,19 +1,14 @@
-export function successResponse(data: any, message = 'Success') {
+import { HttpStatus } from '@nestjs/common';
+
+export function successResponse<T>(
+  data: T,
+  message = 'Success',
+  statusCode: number = HttpStatus.OK,
+) {
   return {
+    statusCode,
     success: true,
     message,
     data,
   };
-}
-
-export function errorResponse(error: unknown, message = 'Error') {
-  if (typeof error === 'string') {
-    return { success: false, message: error };
-  }
-
-  if (error instanceof Error) {
-    return { success: false, message: error.message };
-  }
-
-  return { success: false, message };
 }
