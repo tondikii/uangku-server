@@ -8,6 +8,7 @@ import {
 import { User } from './user.entity';
 import { TransactionWallet } from './transaction-wallet.entity';
 import { LoanWallet } from './loan-wallet.entity';
+import { moneyTransformer } from '../../common/transformers/money.transformer';
 
 @Entity('wallets')
 export class Wallet {
@@ -17,7 +18,13 @@ export class Wallet {
   @Column()
   name: string;
 
-  @Column({ type: 'bigint', default: 0 })
+  @Column({
+    type: 'numeric',
+    precision: 18,
+    scale: 2,
+    default: 0,
+    transformer: moneyTransformer,
+  })
   balance: number;
 
   @ManyToOne(() => User, (user) => user.wallets, { onDelete: 'CASCADE' })

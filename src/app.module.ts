@@ -5,6 +5,7 @@ import { AuthModule } from './features/auth/auth.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { getTypeOrmConfig } from './config/ormconfig';
+import { WalletsModule } from './features/wallets/wallets.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { getTypeOrmConfig } from './config/ormconfig';
       inject: [ConfigService],
     }),
     AuthModule,
+    WalletsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

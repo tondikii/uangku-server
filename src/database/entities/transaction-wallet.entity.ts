@@ -1,6 +1,7 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from 'typeorm';
 import { Transaction } from './transaction.entity';
 import { Wallet } from './wallet.entity';
+import { moneyTransformer } from '../../common/transformers/money.transformer';
 
 @Entity('transaction_wallets')
 export class TransactionWallet {
@@ -22,6 +23,12 @@ export class TransactionWallet {
   @Column({ type: 'boolean' })
   isIncoming: boolean; // true = masuk, false = keluar
 
-  @Column({ type: 'bigint' })
+  @Column({
+    type: 'numeric',
+    precision: 18,
+    scale: 2,
+    default: 0,
+    transformer: moneyTransformer,
+  })
   amount: number;
 }

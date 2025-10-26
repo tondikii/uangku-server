@@ -7,6 +7,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../../database/entities/user.entity';
+import { Wallet } from '../../database/entities/wallet.entity';
 import { comparePassword, hashPassword } from '../../common/utils/bcrypt.util';
 import { SignUpDto } from './dto/sign-up.dto';
 import { SignInDto } from './dto/sign-in.dto';
@@ -19,6 +20,8 @@ export class AuthService {
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
     private readonly jwtService: JwtService,
+    @InjectRepository(Wallet)
+    private readonly walletRepo: Repository<Wallet>,
   ) {}
 
   async signUp(dto: SignUpDto) {
@@ -31,6 +34,13 @@ export class AuthService {
       const hashed = await hashPassword(dto.password);
       const user = this.userRepo.create({ ...dto, password: hashed });
       const savedUser = await this.userRepo.save(user);
+
+      const wallet = this.walletRepo.create({
+        name: 'Cash',
+        user,
+      });
+
+      await this.walletRepo.save(wallet);
 
       delete savedUser.password;
 
