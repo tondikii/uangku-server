@@ -6,6 +6,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { getTypeOrmConfig } from './config/ormconfig';
 import { WalletsModule } from './features/wallets/wallets.module';
+import { TransactionTypesModule } from './features/transaction-types/transaction-types.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { WalletsModule } from './features/wallets/wallets.module';
     }),
     AuthModule,
     WalletsModule,
+    TransactionTypesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

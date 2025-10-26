@@ -27,7 +27,6 @@ export class WalletsController {
   async findAll(@Req() req) {
     const user = req.user; // diisi otomatis oleh JwtStrategy
     const result = await this.walletsService.findAll(user);
-    console.log('Fetched wallets for user:', user.id, result);
     return successResponse(
       result,
       'Wallets fetched successfully',

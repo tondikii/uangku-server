@@ -16,7 +16,7 @@ describe('WalletsController', () => {
   let service: WalletsService;
 
   const mockUser = { id: 1 };
-  const mockWallet = { id: 10, name: 'Cash', balance: 1000 };
+  const mockWallet = { id: 1, name: 'Cash', balance: 1000 };
 
   const mockService = {
     findAll: jest.fn().mockResolvedValue([mockWallet]),
