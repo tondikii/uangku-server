@@ -20,8 +20,8 @@ export class WalletsService {
     });
   }
 
-  async findOne(id: number, user: User) {
-    const wallet = await this.walletRepo.findOne({ where: { id, user } });
+  async findOne(id: number) {
+    const wallet = await this.walletRepo.findOne({ where: { id } });
     if (!wallet) throw new NotFoundException('Wallet not found');
     return wallet;
   }
@@ -34,14 +34,14 @@ export class WalletsService {
     return this.walletRepo.save(wallet);
   }
 
-  async update(id: number, user: User, dto: UpdateWalletDto) {
-    const wallet = await this.findOne(id, user);
+  async update(id: number, dto: UpdateWalletDto) {
+    const wallet = await this.findOne(id);
     Object.assign(wallet, dto);
     return this.walletRepo.save(wallet);
   }
 
-  async remove(id: number, user: User) {
-    const wallet = await this.findOne(id, user);
+  async remove(id: number) {
+    const wallet = await this.findOne(id);
     await this.walletRepo.remove(wallet);
     return { deleted: true };
   }

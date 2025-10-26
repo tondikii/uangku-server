@@ -7,6 +7,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { getTypeOrmConfig } from './config/ormconfig';
 import { WalletsModule } from './features/wallets/wallets.module';
 import { TransactionTypesModule } from './features/transaction-types/transaction-types.module';
+import { TransactionCategoriesModule } from './features/transaction-categories/transaction-categories.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { TransactionTypesModule } from './features/transaction-types/transaction
     AuthModule,
     WalletsModule,
     TransactionTypesModule,
+    TransactionCategoriesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -47,8 +47,8 @@ describe('WalletsController', () => {
   });
 
   it('should return one wallet', async () => {
-    const result = await controller.findOne(10, { user: mockUser });
-    expect(service.findOne).toHaveBeenCalledWith(10, mockUser);
+    const result = await controller.findOne(10);
+    expect(service.findOne).toHaveBeenCalledWith(10);
     expect(result.statusCode).toBe(HttpStatus.OK);
   });
 
@@ -61,14 +61,14 @@ describe('WalletsController', () => {
 
   it('should update wallet', async () => {
     const dto = { name: 'Updated Wallet' };
-    const result = await controller.update(10, dto, { user: mockUser });
-    expect(service.update).toHaveBeenCalledWith(10, mockUser, dto);
+    const result = await controller.update(10, dto);
+    expect(service.update).toHaveBeenCalledWith(10, dto);
     expect(result.statusCode).toBe(HttpStatus.OK);
   });
 
   it('should delete wallet', async () => {
-    const result = await controller.remove(10, { user: mockUser });
-    expect(service.remove).toHaveBeenCalledWith(10, mockUser);
+    const result = await controller.remove(10);
+    expect(service.remove).toHaveBeenCalledWith(10);
     expect(result.statusCode).toBe(HttpStatus.NO_CONTENT);
   });
 });

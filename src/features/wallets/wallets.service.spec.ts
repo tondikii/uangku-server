@@ -39,7 +39,7 @@ describe('WalletsService', () => {
   });
 
   it('should return a single wallet', async () => {
-    const result = await service.findOne(1, mockUser);
+    const result = await service.findOne(1);
     expect(repo.findOne).toHaveBeenCalled();
     expect(result).toEqual(mockWallet);
   });
@@ -55,13 +55,13 @@ describe('WalletsService', () => {
   it('should update a wallet', async () => {
     const dto = { name: 'Updated Cash' };
     jest.spyOn(repo, 'findOne').mockResolvedValueOnce(mockWallet);
-    const result = await service.update(1, mockUser, dto);
+    const result = await service.update(1, dto);
     expect(repo.save).toHaveBeenCalled();
     expect(result).toEqual(mockWallet);
   });
 
   it('should delete a wallet', async () => {
-    const result = await service.remove(1, mockUser);
+    const result = await service.remove(1);
     expect(repo.remove).toHaveBeenCalled();
     expect(result).toEqual({ deleted: true });
   });

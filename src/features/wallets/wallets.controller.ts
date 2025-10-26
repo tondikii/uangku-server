@@ -35,9 +35,8 @@ export class WalletsController {
   }
 
   @Get(':id')
-  async findOne(@Param('id', ParseIntPipe) id: number, @Req() req) {
-    const user = req.user;
-    const result = await this.walletsService.findOne(id, user);
+  async findOne(@Param('id', ParseIntPipe) id: number) {
+    const result = await this.walletsService.findOne(id);
     return successResponse(
       result,
       'Wallet fetched successfully',
@@ -60,10 +59,8 @@ export class WalletsController {
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateWalletDto,
-    @Req() req,
   ) {
-    const user = req.user;
-    const result = await this.walletsService.update(id, user, dto);
+    const result = await this.walletsService.update(id, dto);
     return successResponse(
       result,
       'Wallet updated successfully',
@@ -73,9 +70,8 @@ export class WalletsController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async remove(@Param('id', ParseIntPipe) id: number, @Req() req) {
-    const user = req.user;
-    await this.walletsService.remove(id, user);
+  async remove(@Param('id', ParseIntPipe) id: number) {
+    await this.walletsService.remove(id);
     return successResponse(
       null,
       'Wallet deleted successfully',
