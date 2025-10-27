@@ -7,6 +7,12 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../../database/entities/user.entity';
 
+interface FindAllOptions {
+  page: number;
+  limit: number;
+  transactionTypeId?: number;
+}
+
 @Injectable()
 export class TransactionCategoriesService {
   constructor(
@@ -24,18 +30,41 @@ export class TransactionCategoriesService {
 
     const transactionCategory = this.transactionCategoryRepo.create({
       name: dto.name,
-      transactionType: transactionType,
-      user: user,
+      transactionType,
+      user,
     });
 
     return this.transactionCategoryRepo.save(transactionCategory);
   }
 
-  findAll(user: User) {
-    return this.transactionCategoryRepo.find({
-      where: { user },
-      order: { id: 'ASC' },
-    });
+  async findAll(user: User, options: FindAllOptions) {
+    const { page, limit, transactionTypeId } = options;
+    const skip = (page - 1) * limit;
+
+    const query = this.transactionCategoryRepo
+      .createQueryBuilder('category')
+      .leftJoinAndSelect('category.transactionType', 'transactionType')
+      .where('category.userId = :userId', { userId: user.id });
+
+    if (transactionTypeId) {
+      query.andWhere('category.transactionTypeId = :transactionTypeId', {
+        transactionTypeId,
+      });
+    }
+
+    query.orderBy('category.id', 'ASC').skip(skip).take(limit);
+
+    const [data, total] = await query.getManyAndCount();
+
+    return {
+      data,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
   }
 
   async update(id: number, dto: UpdateTransactionCategoryDto) {
