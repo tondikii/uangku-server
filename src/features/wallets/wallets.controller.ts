@@ -18,14 +18,14 @@ import { CreateWalletDto } from './dto/create-wallet.dto';
 import { UpdateWalletDto } from './dto/update-wallet.dto';
 import { successResponse } from '../../common/utils/response.util';
 
-@UseGuards(AuthGuard('jwt')) // 🔒 semua route di controller ini wajib login
+@UseGuards(AuthGuard('jwt'))
 @Controller('wallets')
 export class WalletsController {
   constructor(private readonly walletsService: WalletsService) {}
 
   @Get()
   async findAll(@Req() req) {
-    const user = req.user; // diisi otomatis oleh JwtStrategy
+    const user = req.user;
     const result = await this.walletsService.findAll(user);
     return successResponse(
       result,

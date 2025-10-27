@@ -9,7 +9,7 @@ import { TransactionWallet } from '../database/entities/transaction-wallet.entit
 import { Loan } from '../database/entities/loan.entity';
 import { LoanWallet } from '../database/entities/loan-wallet.entity';
 
-config(); // biar bisa baca .env
+config();
 
 export const AppDataSource = new DataSource({
   type: 'postgres',

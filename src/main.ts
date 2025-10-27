@@ -7,8 +7,8 @@ async function bootstrap() {
 
   app.useGlobalPipes(
     new ValidationPipe({
-      whitelist: true, // hapus field yang tidak ada di DTO
-      forbidNonWhitelisted: true, // error jika ada field tidak dikenal
+      whitelist: true, // remove fields unregistered in DTO
+      forbidNonWhitelisted: true, // error if there's any unknown field
       transform: true,
       errorHttpStatusCode: HttpStatus.BAD_REQUEST,
     }),

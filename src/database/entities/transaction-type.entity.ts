@@ -7,7 +7,7 @@ export class TransactionType {
   id: number;
 
   @Column()
-  name: string; // e.g. "income", "expense", "transfer"
+  name: string;
 
   @OneToMany(() => TransactionCategory, (category) => category.transactionType)
   categories: TransactionCategory[];

@@ -1,6 +1,6 @@
 import { ValueTransformer } from 'typeorm';
 
 export const moneyTransformer: ValueTransformer = {
-  to: (value: number | string) => value, // disimpan ke DB apa adanya
-  from: (value: string | null) => (value ? Number(value) : 0), // dikonversi ke number waktu dibaca
+  to: (value: number | string) => value, // saved to DB as is
+  from: (value: string | null) => (value ? Number(value) : 0), // converted to number
 };

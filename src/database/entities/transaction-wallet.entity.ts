@@ -21,7 +21,7 @@ export class TransactionWallet {
   wallet: Wallet;
 
   @Column({ type: 'boolean' })
-  isIncoming: boolean; // true = masuk, false = keluar
+  isIncoming: boolean;
 
   @Column({
     type: 'numeric',

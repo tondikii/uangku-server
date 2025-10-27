@@ -1,4 +1,3 @@
-// src/features/auth/strategies/jwt.strategy.ts
 import { Injectable } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
@@ -22,7 +21,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
   async validate(payload: any) {
     const user = await this.userRepo.findOne({ where: { id: payload.sub } });
-    delete user.password; // hapus password biar gak kebawa ke req.user
-    return user; // otomatis jadi req.user
+    delete user.password;
+    return user;
   }
 }
