@@ -24,14 +24,10 @@ export class TransactionCategoriesService {
   ) {}
 
   async create(user: User, dto: CreateTransactionCategoryDto) {
-    const transactionType = await this.transactionTypeRepo.findOne({
-      where: { id: dto.transactionTypeId },
-    });
-
     const transactionCategory = this.transactionCategoryRepo.create({
       name: dto.name,
-      transactionType,
-      user,
+      transactionType: { id: dto.transactionTypeId },
+      user: { id: user.id },
     });
 
     return this.transactionCategoryRepo.save(transactionCategory);

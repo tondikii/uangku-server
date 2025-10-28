@@ -14,9 +14,11 @@ export class WalletsService {
   ) {}
 
   async findAll(user: User) {
+    console.log('Fetching wallets for user:', user);
     return this.walletRepo.find({
-      where: { user },
+      where: { user: { id: user.id } },
       order: { id: 'ASC' },
+      join: { alias: 'wallet', leftJoinAndSelect: { user: 'wallet.user' } },
     });
   }
 
@@ -29,7 +31,7 @@ export class WalletsService {
   async create(user: User, dto: CreateWalletDto) {
     const wallet = this.walletRepo.create({
       ...dto,
-      user,
+      user: { id: user.id },
     });
     return this.walletRepo.save(wallet);
   }
