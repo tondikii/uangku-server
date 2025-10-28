@@ -17,6 +17,9 @@ export class TransactionCategory {
   @Column()
   name: string;
 
+  @Column({ nullable: true })
+  iconName: string | null;
+
   @ManyToOne(() => TransactionType, (type) => type.categories, {
     onDelete: 'CASCADE',
   })

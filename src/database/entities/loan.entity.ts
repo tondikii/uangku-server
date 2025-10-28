@@ -1,4 +1,11 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  OneToMany,
+  CreateDateColumn,
+  UpdateDateColumn,
+} from 'typeorm';
 import { LoanWallet } from './loan-wallet.entity';
 import { moneyTransformer } from '../../common/transformers/money.transformer';
 
@@ -24,4 +31,16 @@ export class Loan {
 
   @OneToMany(() => LoanWallet, (lw) => lw.loan)
   loanWallets: LoanWallet[];
+
+  @CreateDateColumn({ type: 'timestamp' })
+  createdAt: Date;
+
+  @UpdateDateColumn({ type: 'timestamp' })
+  updatedAt: Date;
+
+  @Column({ type: 'timestamp' })
+  givenDate: Date;
+
+  @Column({ type: 'timestamp', nullable: true })
+  paidDate: Date | null;
 }

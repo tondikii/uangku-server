@@ -4,6 +4,8 @@ import {
   Column,
   ManyToOne,
   OneToMany,
+  CreateDateColumn,
+  UpdateDateColumn,
 } from 'typeorm';
 import { User } from './user.entity';
 import { TransactionWallet } from './transaction-wallet.entity';
@@ -35,4 +37,10 @@ export class Wallet {
 
   @OneToMany(() => LoanWallet, (lw) => lw.wallet)
   loanWallets: LoanWallet[];
+
+  @CreateDateColumn({ type: 'timestamp' })
+  createdAt: Date;
+
+  @UpdateDateColumn({ type: 'timestamp' })
+  updatedAt: Date;
 }
