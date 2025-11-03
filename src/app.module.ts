@@ -8,6 +8,7 @@ import { getTypeOrmConfig } from './config/ormconfig';
 import { WalletsModule } from './features/wallets/wallets.module';
 import { TransactionTypesModule } from './features/transaction-types/transaction-types.module';
 import { TransactionCategoriesModule } from './features/transaction-categories/transaction-categories.module';
+import { TransactionsModule } from './features/transactions/transactions.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { TransactionCategoriesModule } from './features/transaction-categories/t
     WalletsModule,
     TransactionTypesModule,
     TransactionCategoriesModule,
+    TransactionsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

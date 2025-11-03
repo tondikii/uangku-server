@@ -12,6 +12,8 @@ import {
   UseGuards,
   Query,
   DefaultValuePipe,
+  UsePipes,
+  ValidationPipe,
 } from '@nestjs/common';
 import { TransactionCategoriesService } from './transaction-categories.service';
 import { CreateTransactionCategoryDto } from './dto/create-transaction-category.dto';
@@ -26,7 +28,11 @@ export class TransactionCategoriesController {
     private readonly transactionCategoriesService: TransactionCategoriesService,
   ) {}
 
+  /**
+   * Create a new transaction category
+   */
   @Post()
+  @UsePipes(new ValidationPipe({ whitelist: true, transform: true }))
   async create(@Body() dto: CreateTransactionCategoryDto, @Req() req) {
     const user = req.user;
     const result = await this.transactionCategoriesService.create(user, dto);
@@ -38,30 +44,37 @@ export class TransactionCategoriesController {
     );
   }
 
+  /**
+   * Get all transaction categories for current user
+   */
   @Get()
   async findAll(
     @Req() req,
-    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page,
-    @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit,
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
+    @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
     @Query('transactionTypeId', new DefaultValuePipe(0), ParseIntPipe)
     transactionTypeId?: number,
   ) {
     const user = req.user;
 
     const result = await this.transactionCategoriesService.findAll(user, {
-      page: page,
-      limit: limit,
-      transactionTypeId: transactionTypeId ? transactionTypeId : undefined,
+      page,
+      limit,
+      transactionTypeId: transactionTypeId || undefined,
     });
 
     return successResponse(
       result,
-      'Transaction Categories fetched successfully',
+      'Transaction categories fetched successfully',
       HttpStatus.OK,
     );
   }
 
+  /**
+   * Update a transaction category by ID
+   */
   @Patch(':id')
+  @UsePipes(new ValidationPipe({ whitelist: true, transform: true }))
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateTransactionCategoryDto,
@@ -69,17 +82,20 @@ export class TransactionCategoriesController {
     const result = await this.transactionCategoriesService.update(id, dto);
     return successResponse(
       result,
-      'Transaction Category updated successfully',
+      'Transaction category updated successfully',
       HttpStatus.OK,
     );
   }
 
+  /**
+   * Delete a transaction category by ID
+   */
   @Delete(':id')
   async remove(@Param('id', ParseIntPipe) id: number) {
     await this.transactionCategoriesService.remove(id);
     return successResponse(
       null,
-      'Transaction Category deleted successfully',
+      'Transaction category deleted successfully',
       HttpStatus.NO_CONTENT,
     );
   }

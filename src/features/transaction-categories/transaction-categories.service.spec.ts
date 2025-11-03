@@ -1,153 +1,175 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { TransactionCategoriesService } from './transaction-categories.service';
-import { TransactionType } from '../../database/entities/transaction-type.entity';
-import { TransactionCategory } from '../../database/entities/transaction-category.entity';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { TransactionCategory } from '../../database/entities/transaction-category.entity';
+import { Repository, ILike } from 'typeorm';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 
 describe('TransactionCategoriesService', () => {
   let service: TransactionCategoriesService;
-  let transactionTypeRepo: jest.Mocked<Repository<TransactionType>>;
-  let transactionCategoryRepo: jest.Mocked<Repository<TransactionCategory>>;
+  let repo: jest.Mocked<Repository<TransactionCategory>>;
 
-  const mockUser = { id: 1, email: 'user@example.com' } as any;
+  const mockCategory: TransactionCategory = {
+    id: 1,
+    name: 'Food',
+    iconName: 'test-icon',
+    transactionType: { id: 1, name: 'Expense' } as any,
+    user: { id: 1, email: 'test@example.com' } as any,
+    transactions: [],
+  };
+
+  const mockUser = { id: 1 } as any;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         TransactionCategoriesService,
         {
-          provide: getRepositoryToken(TransactionType),
-          useValue: {
-            findOne: jest.fn(),
-          },
-        },
-        {
           provide: getRepositoryToken(TransactionCategory),
           useValue: {
+            findOne: jest.fn(),
+            findAndCount: jest.fn(),
             create: jest.fn(),
             save: jest.fn(),
-            findOne: jest.fn(),
             remove: jest.fn(),
-            createQueryBuilder: jest.fn(),
           },
         },
       ],
     }).compile();
 
-    service = module.get(TransactionCategoriesService);
-    transactionTypeRepo = module.get(getRepositoryToken(TransactionType));
-    transactionCategoryRepo = module.get(
-      getRepositoryToken(TransactionCategory),
+    service = module.get<TransactionCategoriesService>(
+      TransactionCategoriesService,
     );
+    repo = module.get(getRepositoryToken(TransactionCategory));
   });
 
-  afterEach(() => jest.clearAllMocks());
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
 
+  // ---------------------------------------------------------------------------
+  // CREATE
+  // ---------------------------------------------------------------------------
   describe('create', () => {
-    it('should create and save a new transaction category', async () => {
-      const dto = { name: 'Food', transactionTypeId: 2 };
-      const mockType = { id: 2, name: 'Expense' } as TransactionType;
-      const mockCategory = { id: 1, name: dto.name, user: mockUser };
+    it('should create a new transaction category', async () => {
+      const dto = { name: 'Food', transactionTypeId: 1, iconName: 'test-icon' };
 
-      transactionTypeRepo.findOne.mockResolvedValue(mockType);
-      transactionCategoryRepo.create.mockReturnValue(mockCategory as any);
-      transactionCategoryRepo.save.mockResolvedValue(mockCategory as any);
+      repo.findOne.mockResolvedValue(null);
+      repo.create.mockReturnValue(mockCategory);
+      repo.save.mockResolvedValue(mockCategory);
 
       const result = await service.create(mockUser, dto);
 
-      expect(transactionTypeRepo.findOne).toHaveBeenCalledWith({
-        where: { id: dto.transactionTypeId },
+      expect(repo.findOne).toHaveBeenCalledWith({
+        where: {
+          name: ILike(dto.name),
+          user: { id: mockUser.id },
+          transactionType: { id: dto.transactionTypeId },
+        },
       });
-      expect(transactionCategoryRepo.create).toHaveBeenCalledWith({
-        name: dto.name,
-        transactionType: mockType,
-        user: mockUser,
-      });
-      expect(transactionCategoryRepo.save).toHaveBeenCalledWith(mockCategory);
+      expect(repo.create).toHaveBeenCalled();
+      expect(repo.save).toHaveBeenCalledWith(mockCategory);
       expect(result).toEqual(mockCategory);
     });
-  });
 
-  describe('findAll', () => {
-    it('should return paginated transaction categories', async () => {
-      const mockQueryBuilder: any = {
-        leftJoinAndSelect: jest.fn().mockReturnThis(),
-        where: jest.fn().mockReturnThis(),
-        andWhere: jest.fn().mockReturnThis(),
-        orderBy: jest.fn().mockReturnThis(),
-        skip: jest.fn().mockReturnThis(),
-        take: jest.fn().mockReturnThis(),
-        getManyAndCount: jest
-          .fn()
-          .mockResolvedValue([[{ id: 1, name: 'Food' }], 1]),
-      };
+    it('should throw BadRequestException if category already exists', async () => {
+      const dto = { name: 'Food', transactionTypeId: 1, iconName: 'test-icon' };
+      repo.findOne.mockResolvedValue(mockCategory);
 
-      transactionCategoryRepo.createQueryBuilder.mockReturnValue(
-        mockQueryBuilder,
+      await expect(service.create(mockUser, dto)).rejects.toThrow(
+        BadRequestException,
       );
-
-      const result = await service.findAll(mockUser, {
-        page: 1,
-        limit: 10,
-        transactionTypeId: 2,
-      });
-
-      expect(transactionCategoryRepo.createQueryBuilder).toHaveBeenCalledWith(
-        'category',
-      );
-      expect(mockQueryBuilder.where).toHaveBeenCalledWith(
-        'category.userId = :userId',
-        { userId: mockUser.id },
-      );
-      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
-        'category.transactionTypeId = :transactionTypeId',
-        { transactionTypeId: 2 },
-      );
-      expect(result).toEqual({
-        data: [{ id: 1, name: 'Food' }],
-        pagination: { total: 1, page: 1, limit: 10, totalPages: 1 },
-      });
     });
   });
 
-  describe('update', () => {
-    it('should update and save the transaction category', async () => {
-      const dto = { name: 'Updated Category' };
-      const mockCategory = { id: 1, name: 'Old Category' };
+  // ---------------------------------------------------------------------------
+  // FIND ALL
+  // ---------------------------------------------------------------------------
+  describe('findAll', () => {
+    it('should return paginated categories', async () => {
+      const options = { page: 1, limit: 10 };
+      repo.findAndCount.mockResolvedValue([[mockCategory], 1]);
 
-      transactionCategoryRepo.findOne.mockResolvedValue(mockCategory as any);
-      transactionCategoryRepo.save.mockResolvedValue({
-        ...mockCategory,
-        ...dto,
-      } as any);
+      const result = await service.findAll(mockUser, options);
+
+      expect(repo.findAndCount).toHaveBeenCalled();
+      expect(result.data).toHaveLength(1);
+      expect(result.pagination.total).toBe(1);
+      expect(result.pagination.totalPages).toBe(1);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // FIND ONE
+  // ---------------------------------------------------------------------------
+  describe('findOne', () => {
+    it('should return a category if found', async () => {
+      repo.findOne.mockResolvedValue(mockCategory);
+
+      const result = await service.findOne(1);
+
+      expect(repo.findOne).toHaveBeenCalledWith({
+        where: { id: 1 },
+        relations: ['transactionType', 'user'],
+      });
+      expect(result).toEqual(mockCategory);
+    });
+
+    it('should throw NotFoundException if category not found', async () => {
+      repo.findOne.mockResolvedValue(null);
+
+      await expect(service.findOne(99)).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // UPDATE
+  // ---------------------------------------------------------------------------
+  describe('update', () => {
+    it('should update a category successfully', async () => {
+      const dto = { name: 'Updated', transactionTypeId: 1 };
+      repo.findOne.mockResolvedValueOnce(mockCategory); // findOne(id)
+      repo.findOne.mockResolvedValueOnce(null); // check duplicate
+      repo.save.mockResolvedValue({ ...mockCategory, ...dto });
 
       const result = await service.update(1, dto);
 
-      expect(transactionCategoryRepo.findOne).toHaveBeenCalledWith({
-        where: { id: 1 },
-      });
-      expect(transactionCategoryRepo.save).toHaveBeenCalledWith({
-        ...mockCategory,
-        ...dto,
-      });
-      expect(result).toEqual({ id: 1, name: 'Updated Category' });
+      expect(repo.findOne).toHaveBeenCalledTimes(2);
+      expect(repo.save).toHaveBeenCalled();
+      expect(result.name).toBe('Updated');
+    });
+
+    it('should throw BadRequestException if duplicate exists', async () => {
+      const dto = { name: 'Duplicate', transactionTypeId: 1 };
+      repo.findOne.mockResolvedValueOnce(mockCategory); // findOne(id)
+      repo.findOne.mockResolvedValueOnce(mockCategory); // duplicate found
+
+      await expect(service.update(1, dto)).rejects.toThrow(BadRequestException);
     });
   });
 
+  // ---------------------------------------------------------------------------
+  // REMOVE
+  // ---------------------------------------------------------------------------
   describe('remove', () => {
-    it('should remove the transaction category', async () => {
-      const mockCategory = { id: 1, name: 'Food' };
-      transactionCategoryRepo.findOne.mockResolvedValue(mockCategory as any);
-      transactionCategoryRepo.remove.mockResolvedValue(mockCategory as any);
+    it('should remove category successfully', async () => {
+      repo.findOne.mockResolvedValue(mockCategory);
+      repo.remove.mockResolvedValue(mockCategory);
 
       const result = await service.remove(1);
 
-      expect(transactionCategoryRepo.findOne).toHaveBeenCalledWith({
+      expect(repo.findOne).toHaveBeenCalledWith({
         where: { id: 1 },
+        relations: ['transactionType', 'user'],
       });
-      expect(transactionCategoryRepo.remove).toHaveBeenCalledWith(mockCategory);
+      expect(repo.remove).toHaveBeenCalledWith(mockCategory);
       expect(result).toEqual({ deleted: true });
+    });
+
+    it('should throw NotFoundException if not found', async () => {
+      repo.findOne.mockResolvedValue(null);
+
+      await expect(service.remove(99)).rejects.toThrow(NotFoundException);
     });
   });
 });

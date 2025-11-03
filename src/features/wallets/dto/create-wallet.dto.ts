@@ -7,5 +7,5 @@ export class CreateWalletDto {
 
   @IsNumber()
   @Min(0)
-  balance?: number;
+  balance: number;
 }

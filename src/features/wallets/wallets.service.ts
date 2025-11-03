@@ -1,29 +1,47 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  forwardRef,
+  Inject,
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, DataSource } from 'typeorm';
 import { Wallet } from '../../database/entities/wallet.entity';
 import { CreateWalletDto } from './dto/create-wallet.dto';
 import { UpdateWalletDto } from './dto/update-wallet.dto';
 import { User } from '../../database/entities/user.entity';
+import { TransactionCategory } from '../../database/entities/transaction-category.entity';
+import { TransactionsService } from '../transactions/transactions.service';
 
 @Injectable()
 export class WalletsService {
   constructor(
     @InjectRepository(Wallet)
     private readonly walletRepo: Repository<Wallet>,
+
+    @InjectRepository(TransactionCategory)
+    private readonly transactionCategoryRepo: Repository<TransactionCategory>,
+
+    @Inject(forwardRef(() => TransactionsService))
+    private readonly transactionsService: TransactionsService,
+
+    private readonly dataSource: DataSource, // 🆕 For optional transactional safety
   ) {}
 
   async findAll(user: User) {
-    console.log('Fetching wallets for user:', user);
     return this.walletRepo.find({
       where: { user: { id: user.id } },
+      relations: ['user'],
       order: { id: 'ASC' },
-      join: { alias: 'wallet', leftJoinAndSelect: { user: 'wallet.user' } },
     });
   }
 
   async findOne(id: number) {
-    const wallet = await this.walletRepo.findOne({ where: { id } });
+    const wallet = await this.walletRepo.findOne({
+      where: { id },
+      relations: ['user'],
+    });
     if (!wallet) throw new NotFoundException('Wallet not found');
     return wallet;
   }
@@ -33,13 +51,57 @@ export class WalletsService {
       ...dto,
       user: { id: user.id },
     });
-    return this.walletRepo.save(wallet);
+    return await this.walletRepo.save(wallet);
   }
 
-  async update(id: number, dto: UpdateWalletDto) {
+  async update(user: User, id: number, dto: UpdateWalletDto) {
     const wallet = await this.findOne(id);
+
+    // Prevent setting negative balance directly
+    if (dto.balance !== undefined && dto.balance < 0) {
+      throw new BadRequestException('Balance cannot be negative');
+    }
+
+    // Handle balance correction
+    if (dto.balance !== undefined && dto.balance !== wallet.balance) {
+      const balanceDiff = dto.balance - wallet.balance;
+      const isIncreasing = balanceDiff > 0;
+      const transactionTypeId = isIncreasing ? 1 : 2;
+
+      const transactionCategory = await this.transactionCategoryRepo.findOne({
+        where: {
+          user: { id: user.id },
+          name: 'Balance Correction',
+          transactionType: { id: transactionTypeId },
+        },
+      });
+
+      if (!transactionCategory) {
+        throw new NotFoundException(
+          `Transaction category 'Balance Correction' not found for type ${transactionTypeId}`,
+        );
+      }
+
+      // 🧠 Wrap in transaction for consistency
+      return await this.dataSource.transaction(async (manager) => {
+        await this.transactionsService.create(user, {
+          transactionTypeId,
+          amount: Math.abs(balanceDiff),
+          walletId: wallet.id,
+          transactionCategoryId: transactionCategory.id,
+        });
+
+        // Refresh wallet after transaction updates its balance
+        return await manager.findOne(Wallet, {
+          where: { id: wallet.id },
+          relations: ['user'],
+        });
+      });
+    }
+
+    // For non-balance updates
     Object.assign(wallet, dto);
-    return this.walletRepo.save(wallet);
+    return await this.walletRepo.save(wallet);
   }
 
   async remove(id: number) {

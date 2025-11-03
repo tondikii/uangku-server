@@ -17,6 +17,18 @@ const TRANSACTION_CATEGORIES = [
       id: 3,
     },
   },
+  {
+    name: 'Balance Correction',
+    transactionType: {
+      id: 1,
+    },
+  },
+  {
+    name: 'Balance Correction',
+    transactionType: {
+      id: 2,
+    },
+  },
 ];
 
 export default TRANSACTION_CATEGORIES;

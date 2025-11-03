@@ -8,7 +8,6 @@ import {
   Delete,
   Req,
   ParseIntPipe,
-  HttpCode,
   HttpStatus,
   UseGuards,
 } from '@nestjs/common';
@@ -25,8 +24,7 @@ export class WalletsController {
 
   @Get()
   async findAll(@Req() req) {
-    const user = req.user;
-    const result = await this.walletsService.findAll(user);
+    const result = await this.walletsService.findAll(req.user);
     return successResponse(
       result,
       'Wallets fetched successfully',
@@ -46,8 +44,7 @@ export class WalletsController {
 
   @Post()
   async create(@Body() dto: CreateWalletDto, @Req() req) {
-    const user = req.user;
-    const result = await this.walletsService.create(user, dto);
+    const result = await this.walletsService.create(req.user, dto);
     return successResponse(
       result,
       'Wallet created successfully',
@@ -59,8 +56,9 @@ export class WalletsController {
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateWalletDto,
+    @Req() req,
   ) {
-    const result = await this.walletsService.update(id, dto);
+    const result = await this.walletsService.update(req.user, id, dto);
     return successResponse(
       result,
       'Wallet updated successfully',
@@ -69,7 +67,6 @@ export class WalletsController {
   }
 
   @Delete(':id')
-  @HttpCode(HttpStatus.NO_CONTENT)
   async remove(@Param('id', ParseIntPipe) id: number) {
     await this.walletsService.remove(id);
     return successResponse(

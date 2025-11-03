@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsNumber, IsString } from 'class-validator';
+import { IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
 
 export class CreateTransactionCategoryDto {
   @IsString()
@@ -8,4 +8,8 @@ export class CreateTransactionCategoryDto {
   @IsNumber()
   @IsNotEmpty()
   transactionTypeId: number;
+
+  @IsOptional()
+  @IsString()
+  iconName: string;
 }
