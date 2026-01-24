@@ -26,7 +26,7 @@ export class WalletsService {
     @Inject(forwardRef(() => TransactionsService))
     private readonly transactionsService: TransactionsService,
 
-    private readonly dataSource: DataSource, // 🆕 For optional transactional safety
+    private readonly dataSource: DataSource,
   ) {}
 
   async findAll(user: User) {
@@ -82,25 +82,53 @@ export class WalletsService {
         );
       }
 
-      // 🧠 Wrap in transaction for consistency
-      return await this.dataSource.transaction(async (manager) => {
-        await this.transactionsService.create(user, {
-          transactionTypeId,
-          amount: Math.abs(balanceDiff),
-          walletId: wallet.id,
-          transactionCategoryId: transactionCategory.id,
-        });
+      // Use queryRunner for proper transaction handling
+      const queryRunner = this.dataSource.createQueryRunner();
+      await queryRunner.connect();
+      await queryRunner.startTransaction();
+
+      try {
+        // Update other fields (like name) FIRST if provided, but NOT balance
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { balance, ...otherFields } = dto;
+        Object.assign(wallet, otherFields);
+
+        if (Object.keys(otherFields).length > 0) {
+          Object.assign(wallet, otherFields);
+          await queryRunner.manager.save(Wallet, wallet);
+        }
+
+        // Create the balance correction transaction using the same manager
+        await this.transactionsService.createWithManager(
+          queryRunner.manager,
+          user,
+          {
+            transactionTypeId,
+            amount: Math.abs(balanceDiff),
+            walletId: wallet.id,
+            transactionCategoryId: transactionCategory.id,
+          },
+        );
+
+        await queryRunner.commitTransaction();
 
         // Refresh wallet after transaction updates its balance
-        return await manager.findOne(Wallet, {
+        return await this.walletRepo.findOne({
           where: { id: wallet.id },
           relations: ['user'],
         });
-      });
+      } catch (error) {
+        await queryRunner.rollbackTransaction();
+        throw error;
+      } finally {
+        await queryRunner.release();
+      }
     }
 
-    // For non-balance updates
-    Object.assign(wallet, dto);
+    // For non-balance updates (excluding balance)
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { balance, ...otherFields } = dto;
+    Object.assign(wallet, otherFields);
     return await this.walletRepo.save(wallet);
   }
 

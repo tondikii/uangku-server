@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource } from 'typeorm';
+import { Repository, DataSource, EntityManager } from 'typeorm';
 import { Transaction } from '../../database/entities/transaction.entity';
 import { TransactionWallet } from '../../database/entities/transaction-wallet.entity';
 import { Wallet } from '../../database/entities/wallet.entity';
@@ -101,6 +101,73 @@ export class TransactionsService {
     } finally {
       await queryRunner.release();
     }
+  }
+
+  async createWithManager(
+    manager: EntityManager,
+    user: User,
+    dto: CreateTransactionDto,
+  ) {
+    // ✅ Validate wallets
+    const sourceWallet = await manager.findOne(Wallet, {
+      where: { id: dto.walletId },
+    });
+    if (!sourceWallet) throw new NotFoundException('Source wallet not found');
+
+    let targetWallet: Wallet | null = null;
+    if (dto.targetWalletId) {
+      targetWallet = await manager.findOne(Wallet, {
+        where: { id: dto.targetWalletId },
+      });
+      if (!targetWallet) throw new NotFoundException('Target wallet not found');
+    }
+
+    // ✅ Create the transaction
+    const transaction = manager.create(Transaction, {
+      amount: dto.amount,
+      adminFee: dto.adminFee || 0,
+      transactionType: { id: dto.transactionTypeId },
+      transactionCategory: { id: dto.transactionCategoryId },
+      user,
+    });
+
+    await manager.save(transaction);
+
+    // ✅ Determine direction
+    const isIncoming = dto.transactionTypeId === 1; // income
+    const isTransfer = dto.transactionTypeId === 3;
+    const finalAmount = isTransfer
+      ? dto.amount + (dto.adminFee || 0)
+      : dto.amount;
+
+    // ✅ Record wallet link (source)
+    const sourceTxWallet = manager.create(TransactionWallet, {
+      transaction,
+      wallet: sourceWallet,
+      isIncoming,
+      amount: finalAmount,
+    });
+    await manager.save(sourceTxWallet);
+
+    // ✅ Adjust source wallet balance
+    sourceWallet.balance += isIncoming ? dto.amount : -finalAmount;
+    await manager.save(sourceWallet);
+
+    // ✅ If transfer, also update target wallet
+    if (isTransfer && targetWallet) {
+      const targetTxWallet = manager.create(TransactionWallet, {
+        transaction,
+        wallet: targetWallet,
+        isIncoming: true,
+        amount: dto.amount,
+      });
+      await manager.save(targetTxWallet);
+
+      targetWallet.balance += dto.amount;
+      await manager.save(targetWallet);
+    }
+
+    return transaction;
   }
 
   /**
