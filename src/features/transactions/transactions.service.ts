@@ -203,7 +203,11 @@ export class TransactionsService {
   async findOne(id: number) {
     const transaction = await this.transactionRepo.findOne({
       where: { id },
-      relations: ['transactionWallets', 'transactionWallets.wallet'],
+      relations: [
+        'transactionType',
+        'transactionCategory',
+        'transactionWallets.wallet',
+      ],
     });
     if (!transaction) throw new NotFoundException('Transaction not found');
     return transaction;
