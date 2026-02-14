@@ -21,34 +21,19 @@ export class TransactionsService {
     @InjectRepository(Wallet)
     private readonly walletRepo: Repository<Wallet>,
 
-    private readonly dataSource: DataSource, // ✅ for transaction safety
+    private readonly dataSource: DataSource,
   ) {}
 
-  /**
-   * Create a new transaction and update related wallets atomically.
-   */
+  /* -------------------------------------------------------------------------- */
+  /*                                  CREATE                                    */
+  /* -------------------------------------------------------------------------- */
+
   async create(user: User, dto: CreateTransactionDto) {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
     try {
-      // ✅ Validate wallets
-      const sourceWallet = await queryRunner.manager.findOne(Wallet, {
-        where: { id: dto.walletId },
-      });
-      if (!sourceWallet) throw new NotFoundException('Source wallet not found');
-
-      let targetWallet: Wallet | null = null;
-      if (dto.targetWalletId) {
-        targetWallet = await queryRunner.manager.findOne(Wallet, {
-          where: { id: dto.targetWalletId },
-        });
-        if (!targetWallet)
-          throw new NotFoundException('Target wallet not found');
-      }
-
-      // ✅ Create the transaction
       const transaction = queryRunner.manager.create(Transaction, {
         amount: dto.amount,
         adminFee: dto.adminFee || 0,
@@ -59,39 +44,11 @@ export class TransactionsService {
 
       await queryRunner.manager.save(transaction);
 
-      // ✅ Determine direction
-      const isIncoming = dto.transactionTypeId === 1; // income
-      const isTransfer = dto.transactionTypeId === 3;
-      const finalAmount = isTransfer
-        ? dto.amount + (dto.adminFee || 0)
-        : dto.amount;
-
-      // ✅ Record wallet link (source)
-      const sourceTxWallet = queryRunner.manager.create(TransactionWallet, {
+      await this.applyTransactionWithManager(
+        queryRunner.manager,
         transaction,
-        wallet: sourceWallet,
-        isIncoming,
-        amount: finalAmount,
-      });
-      await queryRunner.manager.save(sourceTxWallet);
-
-      // ✅ Adjust source wallet balance
-      sourceWallet.balance += isIncoming ? dto.amount : -finalAmount;
-      await queryRunner.manager.save(sourceWallet);
-
-      // ✅ If transfer, also update target wallet
-      if (isTransfer && targetWallet) {
-        const targetTxWallet = queryRunner.manager.create(TransactionWallet, {
-          transaction,
-          wallet: targetWallet,
-          isIncoming: true,
-          amount: dto.amount,
-        });
-        await queryRunner.manager.save(targetTxWallet);
-
-        targetWallet.balance += dto.amount;
-        await queryRunner.manager.save(targetWallet);
-      }
+        dto,
+      );
 
       await queryRunner.commitTransaction();
       return transaction;
@@ -108,21 +65,6 @@ export class TransactionsService {
     user: User,
     dto: CreateTransactionDto,
   ) {
-    // ✅ Validate wallets
-    const sourceWallet = await manager.findOne(Wallet, {
-      where: { id: dto.walletId },
-    });
-    if (!sourceWallet) throw new NotFoundException('Source wallet not found');
-
-    let targetWallet: Wallet | null = null;
-    if (dto.targetWalletId) {
-      targetWallet = await manager.findOne(Wallet, {
-        where: { id: dto.targetWalletId },
-      });
-      if (!targetWallet) throw new NotFoundException('Target wallet not found');
-    }
-
-    // ✅ Create the transaction
     const transaction = manager.create(Transaction, {
       amount: dto.amount,
       adminFee: dto.adminFee || 0,
@@ -132,47 +74,15 @@ export class TransactionsService {
     });
 
     await manager.save(transaction);
-
-    // ✅ Determine direction
-    const isIncoming = dto.transactionTypeId === 1; // income
-    const isTransfer = dto.transactionTypeId === 3;
-    const finalAmount = isTransfer
-      ? dto.amount + (dto.adminFee || 0)
-      : dto.amount;
-
-    // ✅ Record wallet link (source)
-    const sourceTxWallet = manager.create(TransactionWallet, {
-      transaction,
-      wallet: sourceWallet,
-      isIncoming,
-      amount: finalAmount,
-    });
-    await manager.save(sourceTxWallet);
-
-    // ✅ Adjust source wallet balance
-    sourceWallet.balance += isIncoming ? dto.amount : -finalAmount;
-    await manager.save(sourceWallet);
-
-    // ✅ If transfer, also update target wallet
-    if (isTransfer && targetWallet) {
-      const targetTxWallet = manager.create(TransactionWallet, {
-        transaction,
-        wallet: targetWallet,
-        isIncoming: true,
-        amount: dto.amount,
-      });
-      await manager.save(targetTxWallet);
-
-      targetWallet.balance += dto.amount;
-      await manager.save(targetWallet);
-    }
+    await this.applyTransactionWithManager(manager, transaction, dto);
 
     return transaction;
   }
 
-  /**
-   * Paginated fetch of user’s transactions
-   */
+  /* -------------------------------------------------------------------------- */
+  /*                                   FIND                                     */
+  /* -------------------------------------------------------------------------- */
+
   async findAll(user: User, options: FindAllOptions) {
     const { page, limit } = options;
     const skip = (page - 1) * limit;
@@ -209,82 +119,111 @@ export class TransactionsService {
         'transactionWallets.wallet',
       ],
     });
-    if (!transaction) throw new NotFoundException('Transaction not found');
-    return transaction;
-  }
 
-  /**
-   * Update an existing transaction and adjust wallet balances accordingly
-   */
-  async update(id: number, dto: UpdateTransactionDto) {
-    const transaction = await this.findOne(id);
-
-    const oldAmount = transaction.amount;
-    const oldAdminFee = transaction.adminFee || 0;
-
-    Object.assign(transaction, dto);
-    await this.transactionRepo.save(transaction);
-
-    const newAdminFee = dto.adminFee ?? oldAdminFee;
-
-    // Adjust if either amount or adminFee changes
-    if (
-      dto.amount !== undefined &&
-      (dto.amount !== oldAmount || newAdminFee !== oldAdminFee)
-    ) {
-      const amountDiff = dto.amount - oldAmount;
-      const adminFeeDiff = newAdminFee - oldAdminFee;
-      const totalDiff = amountDiff + adminFeeDiff;
-
-      const txWallets = await this.transactionWalletRepo.find({
-        where: { transaction: { id } },
-        relations: ['wallet'],
-      });
-
-      for (const txWallet of txWallets) {
-        const wallet = txWallet.wallet;
-
-        if (txWallet.isIncoming) {
-          wallet.balance += amountDiff; // incoming wallets only see amount diff
-        } else {
-          wallet.balance -= totalDiff; // outgoing wallets see both amount + adminFee diff
-        }
-
-        await this.walletRepo.save(wallet);
-      }
+    if (!transaction) {
+      throw new NotFoundException('Transaction not found');
     }
 
     return transaction;
   }
 
-  /**
-   * Delete a transaction and reverse its wallet balance effects
-   */
-  async remove(id: number) {
-    const transaction = await this.findOne(id);
-    const txWallets = await this.transactionWalletRepo.find({
-      where: { transaction: { id } },
-      relations: ['wallet'],
-    });
+  /* -------------------------------------------------------------------------- */
+  /*                                   UPDATE                                   */
+  /* -------------------------------------------------------------------------- */
 
+  async update(id: number, dto: UpdateTransactionDto) {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
     try {
-      // ✅ Reverse balances
-      for (const txWallet of txWallets) {
+      const transaction = await queryRunner.manager.findOne(Transaction, {
+        where: { id },
+        relations: ['transactionWallets', 'transactionWallets.wallet'],
+      });
+
+      if (!transaction) {
+        throw new NotFoundException('Transaction not found');
+      }
+
+      /* 1️⃣ REVERSE OLD EFFECTS */
+      for (const txWallet of transaction.transactionWallets) {
         const wallet = txWallet.wallet;
+
         if (txWallet.isIncoming) {
           wallet.balance -= txWallet.amount;
         } else {
           wallet.balance += txWallet.amount;
         }
+
         await queryRunner.manager.save(wallet);
       }
 
-      // ✅ Delete transactionWallets + transaction
-      await queryRunner.manager.remove(txWallets);
+      await queryRunner.manager.remove(transaction.transactionWallets);
+
+      /* 2️⃣ UPDATE TRANSACTION CORE DATA */
+      Object.assign(transaction, {
+        amount: dto.amount ?? transaction.amount,
+        adminFee: dto.adminFee ?? transaction.adminFee,
+        transactionType: dto.transactionTypeId
+          ? { id: dto.transactionTypeId }
+          : transaction.transactionType,
+        transactionCategory: dto.transactionCategoryId
+          ? { id: dto.transactionCategoryId }
+          : transaction.transactionCategory,
+      });
+
+      await queryRunner.manager.save(transaction);
+
+      /* 3️⃣ APPLY NEW EFFECTS */
+      await this.applyTransactionWithManager(
+        queryRunner.manager,
+        transaction,
+        dto,
+      );
+
+      await queryRunner.commitTransaction();
+      return transaction;
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+  /* -------------------------------------------------------------------------- */
+  /*                                   DELETE                                   */
+  /* -------------------------------------------------------------------------- */
+
+  async remove(id: number) {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      const transaction = await queryRunner.manager.findOne(Transaction, {
+        where: { id },
+        relations: ['transactionWallets', 'transactionWallets.wallet'],
+      });
+
+      if (!transaction) {
+        throw new NotFoundException('Transaction not found');
+      }
+
+      for (const txWallet of transaction.transactionWallets) {
+        const wallet = txWallet.wallet;
+
+        if (txWallet.isIncoming) {
+          wallet.balance -= txWallet.amount;
+        } else {
+          wallet.balance += txWallet.amount;
+        }
+
+        await queryRunner.manager.save(wallet);
+      }
+
+      await queryRunner.manager.remove(transaction.transactionWallets);
       await queryRunner.manager.remove(transaction);
 
       await queryRunner.commitTransaction();
@@ -294,6 +233,69 @@ export class TransactionsService {
       throw error;
     } finally {
       await queryRunner.release();
+    }
+  }
+
+  /* -------------------------------------------------------------------------- */
+  /*                             SHARED APPLY LOGIC                              */
+  /* -------------------------------------------------------------------------- */
+
+  private async applyTransactionWithManager(
+    manager: EntityManager,
+    transaction: Transaction,
+    dto: CreateTransactionDto | UpdateTransactionDto,
+  ) {
+    const sourceWallet = await manager.findOne(Wallet, {
+      where: { id: dto.walletId },
+    });
+    if (!sourceWallet) {
+      throw new NotFoundException('Source wallet not found');
+    }
+
+    const typeId = transaction.transactionType.id;
+    const isIncome = typeId === 1;
+    const isTransfer = typeId === 3;
+
+    const adminFee = transaction.adminFee || 0;
+    const finalAmount = isTransfer
+      ? transaction.amount + adminFee
+      : transaction.amount;
+
+    // SOURCE WALLET
+    const sourceTxWallet = manager.create(TransactionWallet, {
+      transaction,
+      wallet: sourceWallet,
+      isIncoming: isIncome,
+      amount: finalAmount,
+    });
+
+    await manager.save(sourceTxWallet);
+
+    sourceWallet.balance += isIncome ? transaction.amount : -finalAmount;
+
+    await manager.save(sourceWallet);
+
+    // TARGET WALLET (TRANSFER)
+    if (isTransfer && dto.targetWalletId) {
+      const targetWallet = await manager.findOne(Wallet, {
+        where: { id: dto.targetWalletId },
+      });
+
+      if (!targetWallet) {
+        throw new NotFoundException('Target wallet not found');
+      }
+
+      const targetTxWallet = manager.create(TransactionWallet, {
+        transaction,
+        wallet: targetWallet,
+        isIncoming: true,
+        amount: transaction.amount,
+      });
+
+      await manager.save(targetTxWallet);
+
+      targetWallet.balance += transaction.amount;
+      await manager.save(targetWallet);
     }
   }
 }
