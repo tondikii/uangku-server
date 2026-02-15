@@ -51,7 +51,7 @@ export class TransactionCategoriesController {
   async findAll(
     @Req() req,
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
-    @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
+    @Query('limit', new DefaultValuePipe(100), ParseIntPipe) limit: number,
     @Query('transactionTypeId', new DefaultValuePipe(0), ParseIntPipe)
     transactionTypeId?: number,
   ) {

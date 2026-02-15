@@ -53,8 +53,7 @@ export class AuthService {
 
       const categories = TRANSACTION_CATEGORIES.map((c) =>
         queryRunner.manager.create(TransactionCategory, {
-          name: c.name,
-          transactionType: c.transactionType,
+          ...c,
           user: savedUser,
         }),
       );
