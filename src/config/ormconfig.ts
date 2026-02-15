@@ -13,11 +13,10 @@ export const getTypeOrmConfig = (
   configService: ConfigService,
 ): TypeOrmModuleOptions => ({
   type: 'postgres',
-  host: configService.get<string>('POSTGRES_HOST'),
-  port: configService.get<number>('POSTGRES_PORT'),
-  username: configService.get<string>('POSTGRES_USERNAME'),
-  password: configService.get<string>('POSTGRES_PASSWORD'),
-  database: configService.get<string>('DATABASE_NAME'),
+  url: configService.get('DATABASE_URL'),
+  ssl: {
+    rejectUnauthorized: false, // Required for Supabase
+  },
   entities: [
     User,
     Wallet,
@@ -28,7 +27,10 @@ export const getTypeOrmConfig = (
     Loan,
     LoanWallet,
   ],
-  migrations: [],
-  synchronize: false,
-  logging: true,
+  synchronize: false, // Keep this false in production
+  logging: configService.get('NODE_ENV') === 'development',
+  extra: {
+    max: 10, // Connection pool size
+    connectionTimeoutMillis: 10000,
+  },
 });

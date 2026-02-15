@@ -1,15 +1,13 @@
 {
-  "version": 2,
-  "builds": [
+  "buildCommand": "pnpm run build",
+  "outputDirectory": "dist",
+  "devCommand": "pnpm run start:dev",
+  "installCommand": "pnpm install",
+  "framework": null,
+  "rewrites": [
     {
-      "src": "dist/main.js",
-      "use": "@vercel/node"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "dist/main.js"
+      "source": "/(.*)",
+      "destination": "/api"
     }
   ]
 }

@@ -9,15 +9,14 @@ import { TransactionWallet } from '../database/entities/transaction-wallet.entit
 import { Loan } from '../database/entities/loan.entity';
 import { LoanWallet } from '../database/entities/loan-wallet.entity';
 
-config();
+config(); // Load .env file
 
-export const AppDataSource = new DataSource({
+export default new DataSource({
   type: 'postgres',
-  host: process.env.POSTGRES_HOST,
-  port: Number(process.env.POSTGRES_PORT),
-  username: process.env.POSTGRES_USERNAME,
-  password: process.env.POSTGRES_PASSWORD,
-  database: process.env.DATABASE_NAME,
+  url: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false,
+  },
   entities: [
     User,
     Wallet,
