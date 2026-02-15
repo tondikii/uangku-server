@@ -1,29 +1,20 @@
 import { ValidationPipe, HttpStatus } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { ExpressAdapter } from '@nestjs/platform-express';
-import serverless from 'serverless-http';
-import * as express from 'express';
-
-const server = express();
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, new ExpressAdapter(server));
-
+  const app = await NestFactory.create(AppModule);
   app.enableCors();
 
   app.useGlobalPipes(
     new ValidationPipe({
-      whitelist: true,
-      forbidNonWhitelisted: true,
+      whitelist: true, // remove fields unregistered in DTO
+      forbidNonWhitelisted: true, // error if there's any unknown field
       transform: true,
       errorHttpStatusCode: HttpStatus.BAD_REQUEST,
     }),
   );
 
-  await app.init();
+  await app.listen(process.env.PORT);
 }
-
 bootstrap();
-
-export const handler = serverless(server);
