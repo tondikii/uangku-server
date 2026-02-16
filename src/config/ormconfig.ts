@@ -13,15 +13,10 @@ export const getTypeOrmConfig = (
   configService: ConfigService,
 ): TypeOrmModuleOptions => ({
   type: 'postgres',
-  // url: configService.get('DATABASE_URL'),
-  // ssl: {
-  //   rejectUnauthorized: false, // Required for Supabase
-  // },
-  host: configService.get<string>('POSTGRES_HOST'),
-  port: configService.get<number>('POSTGRES_PORT'),
-  username: configService.get<string>('POSTGRES_USERNAME'),
-  password: configService.get<string>('POSTGRES_PASSWORD'),
-  database: configService.get<string>('DATABASE_NAME'),
+  url: configService.get('DATABASE_URL'),
+  ssl: {
+    rejectUnauthorized: false, // Required for Supabase
+  },
   entities: [
     User,
     Wallet,
