@@ -9,7 +9,7 @@ import { TransactionCategory } from '../../database/entities/transaction-categor
 import { CreateTransactionCategoryDto } from './dto/create-transaction-category.dto';
 import { UpdateTransactionCategoryDto } from './dto/update-transaction-category.dto';
 import { User } from '../../database/entities/user.entity';
-import { FindAllOptions } from '../../common/interfaces/pagination.interface';
+import { FindAllOptions } from 'src/common/interfaces/find.interfaces';
 
 @Injectable()
 export class TransactionCategoriesService {

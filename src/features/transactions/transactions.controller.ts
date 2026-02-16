@@ -40,11 +40,13 @@ export class TransactionsController {
     @Req() req,
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
+    @Query('date') date?: string,
   ) {
     const user = req.user;
     const result = await this.transactionsService.findAll(user, {
       page,
       limit,
+      date,
     });
     return successResponse(
       result,

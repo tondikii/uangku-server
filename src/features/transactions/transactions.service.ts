@@ -1,13 +1,15 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, EntityManager } from 'typeorm';
+import { startOfDay, endOfDay } from 'date-fns';
+
 import { Transaction } from '../../database/entities/transaction.entity';
 import { TransactionWallet } from '../../database/entities/transaction-wallet.entity';
 import { Wallet } from '../../database/entities/wallet.entity';
 import { User } from '../../database/entities/user.entity';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { UpdateTransactionDto } from './dto/update-transaction.dto';
-import { FindAllOptions } from '../../common/interfaces/pagination.interface';
+import { FindAllOptions } from 'src/common/interfaces/find.interfaces';
 
 @Injectable()
 export class TransactionsService {
@@ -84,23 +86,98 @@ export class TransactionsService {
   /* -------------------------------------------------------------------------- */
 
   async findAll(user: User, options: FindAllOptions) {
-    const { page, limit } = options;
+    const { page, limit, date } = options;
     const skip = (page - 1) * limit;
 
-    const [result, total] = await this.transactionRepo.findAndCount({
-      where: { user: { id: user.id } },
-      relations: [
-        'transactionType',
+    let startDate: Date | undefined;
+    let endDate: Date | undefined;
+
+    if (date) {
+      startDate = startOfDay(new Date(date));
+      endDate = endOfDay(new Date(date));
+    }
+
+    const query = this.transactionRepo
+      .createQueryBuilder('transaction')
+      .leftJoinAndSelect('transaction.transactionType', 'transactionType')
+      .leftJoinAndSelect(
+        'transaction.transactionCategory',
         'transactionCategory',
-        'transactionWallets.wallet',
-      ],
-      skip,
-      take: limit,
-      order: { createdAt: 'DESC' },
-    });
+      )
+      .leftJoinAndSelect('transaction.transactionWallets', 'transactionWallets')
+      .leftJoinAndSelect('transactionWallets.wallet', 'wallet')
+      .where('transaction.userId = :userId', { userId: user.id });
+
+    if (date) {
+      query.andWhere('transaction.createdAt BETWEEN :start AND :end', {
+        start: startDate,
+        end: endDate,
+      });
+    }
+
+    // pagination
+    query.skip(skip).take(limit);
+    query.orderBy('transaction.createdAt', 'DESC');
+
+    const [result, total] = await query.getManyAndCount();
+
+    // ========================
+    // SUMMARY QUERY
+    // ========================
+
+    const summaryQuery = this.transactionRepo
+      .createQueryBuilder('transaction')
+      .leftJoin('transaction.transactionType', 'transactionType')
+      .where('transaction.userId = :userId', { userId: user.id });
+
+    if (date) {
+      summaryQuery.andWhere('transaction.createdAt BETWEEN :start AND :end', {
+        start: startDate,
+        end: endDate,
+      });
+    }
+
+    const summaryRaw = await this.transactionRepo
+      .createQueryBuilder('transaction')
+      .leftJoin('transaction.transactionWallets', 'tw')
+      .leftJoin('transaction.transactionType', 'transactionType')
+      .where('transaction.userId = :userId', { userId: user.id })
+      .andWhere(
+        date ? 'transaction.createdAt BETWEEN :start AND :end' : '1=1',
+        date ? { start: startDate, end: endDate } : {},
+      )
+      .select([
+        `
+    SUM(
+      CASE 
+        WHEN tw.isIncoming = true 
+        THEN tw.amount 
+        ELSE 0 
+      END
+    ) as income
+    `,
+        `
+    SUM(
+      CASE 
+        WHEN tw.isIncoming = false 
+        THEN tw.amount 
+        ELSE 0 
+      END
+    ) as expense
+    `,
+      ])
+      .getRawOne();
+
+    const income = Number(summaryRaw.income) || 0;
+    const expense = Number(summaryRaw.expense) || 0;
 
     return {
       data: result,
+      summary: {
+        income,
+        expense,
+        balance: income - expense,
+      },
       pagination: {
         total,
         page,
