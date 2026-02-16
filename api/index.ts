@@ -12,11 +12,7 @@ async function getApp(): Promise<INestApplication> {
 
   app = await NestFactory.create(AppModule, new ExpressAdapter(expressApp));
 
-  app.enableCors({
-    origin: 'https://uangku-959df.web.app', // Specific origin is safer than '*'
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-    credentials: true,
-  });
+  app.enableCors();
 
   app.useGlobalPipes(
     new ValidationPipe({
