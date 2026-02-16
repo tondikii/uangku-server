@@ -139,8 +139,7 @@ export class TransactionsService {
 
     const summaryRaw = await this.transactionRepo
       .createQueryBuilder('transaction')
-      .leftJoin('transaction.transactionWallets', 'tw')
-      .leftJoin('transaction.transactionType', 'transactionType')
+      .leftJoin('transaction.transactionType', 'type')
       .where('transaction.userId = :userId', { userId: user.id })
       .andWhere(
         date ? 'transaction.createdAt BETWEEN :start AND :end' : '1=1',
@@ -150,18 +149,17 @@ export class TransactionsService {
         `
     SUM(
       CASE 
-        WHEN tw.isIncoming = true 
-        THEN tw.amount 
-        ELSE 0 
+        WHEN type.id = 1 THEN transaction.amount
+        ELSE 0
       END
     ) as income
     `,
         `
     SUM(
       CASE 
-        WHEN tw.isIncoming = false 
-        THEN tw.amount 
-        ELSE 0 
+        WHEN type.id = 2 THEN transaction.amount
+        WHEN type.id = 3 THEN "transaction"."adminFee"
+        ELSE 0
       END
     ) as expense
     `,

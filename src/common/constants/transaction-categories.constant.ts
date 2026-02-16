@@ -69,6 +69,11 @@ const TRANSACTION_CATEGORIES = [
     iconName: 'sack-dollar',
   },
   {
+    name: 'Withdrawal',
+    transactionType: { id: 3 },
+    iconName: 'hand-holding-dollar',
+  },
+  {
     name: 'Bank Transfer',
     transactionType: { id: 3 },
     iconName: 'building-columns',

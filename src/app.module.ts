@@ -9,6 +9,7 @@ import { WalletsModule } from './features/wallets/wallets.module';
 import { TransactionTypesModule } from './features/transaction-types/transaction-types.module';
 import { TransactionCategoriesModule } from './features/transaction-categories/transaction-categories.module';
 import { TransactionsModule } from './features/transactions/transactions.module';
+import { ReportsModule } from './features/reports/reports.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { TransactionsModule } from './features/transactions/transactions.module'
     TransactionTypesModule,
     TransactionCategoriesModule,
     TransactionsModule,
+    ReportsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
