@@ -1,4 +1,10 @@
-import { IsNotEmpty, IsNumber, IsOptional, Min } from 'class-validator';
+import {
+  IsDateString,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  Min,
+} from 'class-validator';
 
 export class CreateTransactionDto {
   @IsNotEmpty()
@@ -25,4 +31,8 @@ export class CreateTransactionDto {
   @IsOptional()
   @IsNumber()
   targetWalletId?: number;
+
+  @IsOptional()
+  @IsDateString()
+  createdAt?: string;
 }

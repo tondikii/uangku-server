@@ -42,6 +42,7 @@ export class TransactionsService {
         transactionType: { id: dto.transactionTypeId },
         transactionCategory: { id: dto.transactionCategoryId },
         user,
+        ...(dto.createdAt && { createdAt: new Date(dto.createdAt) }),
       });
 
       await queryRunner.manager.save(transaction);
@@ -73,6 +74,7 @@ export class TransactionsService {
       transactionType: { id: dto.transactionTypeId },
       transactionCategory: { id: dto.transactionCategoryId },
       user,
+      ...(dto.createdAt && { createdAt: new Date(dto.createdAt) }),
     });
 
     await manager.save(transaction);
@@ -224,13 +226,11 @@ export class TransactionsService {
       /* 1️⃣ REVERSE OLD EFFECTS */
       for (const txWallet of transaction.transactionWallets) {
         const wallet = txWallet.wallet;
-
         if (txWallet.isIncoming) {
           wallet.balance -= txWallet.amount;
         } else {
           wallet.balance += txWallet.amount;
         }
-
         await queryRunner.manager.save(wallet);
       }
 
@@ -240,6 +240,9 @@ export class TransactionsService {
       Object.assign(transaction, {
         amount: dto.amount ?? transaction.amount,
         adminFee: dto.adminFee ?? transaction.adminFee,
+        createdAt: dto.createdAt
+          ? new Date(dto.createdAt)
+          : transaction.createdAt,
         transactionType: dto.transactionTypeId
           ? { id: dto.transactionTypeId }
           : transaction.transactionType,
