@@ -24,7 +24,6 @@ async function getApp(): Promise<INestApplication> {
   );
 
   await app.init();
-  console.log('NestJS application initialized');
 
   return app;
 }

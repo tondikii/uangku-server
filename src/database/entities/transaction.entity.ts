@@ -32,6 +32,7 @@ export class Transaction {
 
   @ManyToOne(() => TransactionCategory, (category) => category.transactions, {
     onDelete: 'SET NULL',
+    nullable: true,
   })
   transactionCategory: TransactionCategory;
 
@@ -49,6 +50,33 @@ export class Transaction {
 
   @OneToMany(() => TransactionWallet, (tw) => tw.transaction)
   transactionWallets: TransactionWallet[];
+
+  /**
+   * ID unik dari sumber eksternal, format: "gmail_{gmailMessageId}"
+   *
+   * Digunakan untuk mencegah duplikasi — sebelum import email,
+   * kita cek dulu apakah externalRef ini sudah ada di DB.
+   * Kalau sudah ada, skip. Ini membuat sync bersifat idempotent
+   * (boleh dijalankan berkali-kali, hasilnya sama).
+   *
+   * Null = transaksi manual dari user.
+   */
+  @Column({ nullable: true, type: 'varchar', length: 100 })
+  externalRef: string | null;
+
+  /**
+   * Dari mana transaksi ini berasal:
+   * - 'manual'           → diinput user lewat form
+   * - 'gmail_scheduler'  → auto-import dari cron job jam 00:00
+   * - 'gmail_manual'     → user klik tombol "Sync Gmail"
+   */
+  @Column({
+    nullable: true,
+    type: 'varchar',
+    length: 20,
+    default: 'manual',
+  })
+  importSource: 'manual' | 'gmail_scheduler' | 'gmail_manual' | null;
 
   @CreateDateColumn({ type: 'timestamp' })
   createdAt: Date;
