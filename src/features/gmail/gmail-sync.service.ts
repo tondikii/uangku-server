@@ -342,8 +342,7 @@ export class GmailSyncService {
   ): Promise<void> {
     const typeId = TRANSACTION_TYPE_ID[parsed.transactionType];
 
-    // Cari category by name jika parser kasih hint,
-    // fallback ke category pertama untuk tipe tersebut
+    // Cari category by name jika parser kasih hint
     let category: TransactionCategory | null = null;
 
     if (parsed.categoryName) {
@@ -356,12 +355,13 @@ export class GmailSyncService {
       });
     }
 
-    // Fallback: ambil category pertama untuk tipe ini
+    // Fallback ke "Unknown" jika category tidak ditemukan
     if (!category) {
       category = await this.categoryRepo.findOne({
         where: {
           user: { id: user.id },
           transactionType: { id: typeId },
+          name: 'Unknown',
         },
       });
     }

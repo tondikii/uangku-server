@@ -62,12 +62,7 @@ const TRANSACTION_CATEGORIES = [
   { name: 'Investments', transactionType: { id: 1 }, iconName: 'chart-line' },
 
   // --- TRANSFERS ---
-
-  {
-    name: 'Top Up',
-    transactionType: { id: 3 },
-    iconName: 'sack-dollar',
-  },
+  { name: 'Top Up', transactionType: { id: 3 }, iconName: 'sack-dollar' },
   {
     name: 'Withdrawal',
     transactionType: { id: 3 },
@@ -84,7 +79,7 @@ const TRANSACTION_CATEGORIES = [
     iconName: 'mobile-screen-button',
   },
 
-  // --- HIGH FREQUENCY (Akan muncul paling atas di UI) ---
+  // --- HIGH FREQUENCY ---
   { name: 'Electronics', transactionType: { id: 2 }, iconName: 'laptop' },
   { name: 'Health', transactionType: { id: 2 }, iconName: 'heart-pulse' },
   { name: 'Car', transactionType: { id: 2 }, iconName: 'car' },
@@ -98,6 +93,11 @@ const TRANSACTION_CATEGORIES = [
   { name: 'Shopping', transactionType: { id: 2 }, iconName: 'cart-shopping' },
   { name: 'Food', transactionType: { id: 2 }, iconName: 'utensils' },
   { name: 'Salary', transactionType: { id: 1 }, iconName: 'money-bill-wave' },
+
+  // --- UNKNOWN (fallback untuk transaksi yang tidak bisa diidentifikasi) ---
+  { name: 'Unknown', transactionType: { id: 1 }, iconName: 'question' }, // Income Unknown
+  { name: 'Unknown', transactionType: { id: 2 }, iconName: 'question' }, // Expense Unknown
+  { name: 'Unknown', transactionType: { id: 3 }, iconName: 'question' }, // Transfer Unknown
 ];
 
 export default TRANSACTION_CATEGORIES;
